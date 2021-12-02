@@ -13,7 +13,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='weather4cast')
     
     # load data from file
-    parser.add_argument('--data_path', type=str, default='/home/yaoyi/lin00786/weather4cast/preprocess-data/', 
+    parser.add_argument('--data_path', type=str, default='/data/yijun/WeatherMovie/preprocess-data/', 
                         help='data path, dynamic variables')
     parser.add_argument('--sample_path', type=str, default='./samples.csv', 
                         help='data path, splitting information')
@@ -21,12 +21,12 @@ def parse_args():
                         help="region_id to load data from. Default: R1")
     
     parser.add_argument('--model_name', type=str, default='test', help='model name')
-    parser.add_argument('--result_path', type=str, default='/home/yaoyi/lin00786/weather4cast/weather4cast-test-lightning/results',
+    parser.add_argument('--result_path', type=str, default='/data/yijun/WeatherMovie/weather4cast-baselines/results',
                          help='result path, including log file and model file')
     
     # training parameters
-    parser.add_argument('--gpu_id', type=str, default='0', help='GPU id')
-    parser.add_argument('--num_epochs', type=int, default=100, help='number of epochs for training')
+    parser.add_argument('--gpu_id', type=int, default=0, help='GPU id')
+    parser.add_argument('--num_epochs', type=int, default=600, help='number of epochs for training')
     parser.add_argument('--batch_size', type=int, default=32, help='training batch size')
     parser.add_argument('--lr', type=float, default=0.001, help='initial learning rate for adam')
     parser.add_argument('--weight_decay', type=float, default=0.001, help='the scalar for l2 loss')
@@ -146,15 +146,22 @@ def load_param_dict(args=None, mode='train'):
     param_dict['target_vars'] = ['temperature']
     
     if mode == 'train':
-        model_name = '{}_seq{}_hoz{}_in{}_out{}_kernel{}_hdim{}'.format(param_dict['model_name'],
-                                                                        param_dict['seq_len'],
-                                                                        param_dict['horizon'],
-                                                                        len(param_dict['source_vars']),
-                                                                        len(param_dict['target_vars']),
-                                                                        param_dict['kernel_size'],
-                                                                        param_dict['h_dim'],
-                                                                       )
-        
+        model_name = ''
+        if param_dict['model_name'] == 'seq2seq':
+            model_name = '{}_seq{}_hoz{}_in{}_out{}_kernel{}_hdim{}'.format(param_dict['model_name'],
+                                                                            param_dict['seq_len'],
+                                                                            param_dict['horizon'],
+                                                                            len(param_dict['source_vars']),
+                                                                            len(param_dict['target_vars']),
+                                                                            param_dict['kernel_size'],
+                                                                            param_dict['h_dim'],)
+        if param_dict['model_name'] == 'unet':
+            model_name = '{}_seq{}_hoz{}_in{}_out{}'.format(param_dict['model_name'],
+                                                            param_dict['seq_len'],
+                                                            param_dict['horizon'],
+                                                            len(param_dict['source_vars']),
+                                                            len(param_dict['target_vars']),)
+
         param_dict['result_path'] = os.path.join(param_dict['result_path'], 
                                                  model_name + '_' + str(int(time.time())))        
     else:

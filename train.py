@@ -21,8 +21,8 @@ from utils.data_loader import WMDataset, split_train_val_test
 
 def train(params):
     
-    device = 1 if torch.cuda.is_available() else None
-    logging.info(f'Device - {device}')
+    device = params['gpu_id'] if torch.cuda.is_available() else None
+    logging.info(f'Device - GPU:{device}')
 
     dataset = WMDataset(data_path=params['data_path'], 
                         sample_path=params['sample_path'],
@@ -78,7 +78,7 @@ def train(params):
         monitor='val_loss',
         mode='min',
         dirpath=params['model_path'],
-        filename='{epoch}-{val_loss:.2f}',
+        filename='{epoch}-{val_loss:.5f}',
     )
     
     earlystop_callback = EarlyStopping(
@@ -91,7 +91,7 @@ def train(params):
     
     trainer = pl.Trainer(
         max_epochs=params['num_epochs'],
-        gpus=device,
+        gpus=[device],
         log_every_n_steps=10,
         progress_bar_refresh_rate=0.5,
         logger=[tensorboard_logger, csv_logger],

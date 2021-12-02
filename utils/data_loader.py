@@ -16,7 +16,7 @@ class WMDataset(Dataset):
     def __init__(self, data_path, sample_path, 
                  region_id='R1', 
                  source_vars=['temperature', 'crr_intensity', 'asii_turb_trop_prob', 'cma'], 
-                 target_vars=['temperature'], #, 'crr_intensity', 'asii_turb_trop_prob', 'cma'], 
+                 target_vars=['temperature', 'crr_intensity', 'asii_turb_trop_prob', 'cma'], 
                  seq_len=4, 
                  horizon=1, 
                  use_static=False, **kwargs):
@@ -27,8 +27,8 @@ class WMDataset(Dataset):
             region_id (str): region to load data from. Default: 'R1'.
             source_vars (list): input sequence variables
             target_vars (list): output sequence variables, by default same as source variables
-            seq_len (int): input sequence length. Default: 32
-            horizon (int): output sequence length. Default: 32.
+            seq_len (int): input sequence length. Default: 4
+            horizon (int): output sequence length. Default: 4.
             use_static (boolean): use static features. Default: False.
         """
     
@@ -61,10 +61,12 @@ class WMDataset(Dataset):
         assert os.path.exists(path), "Input path does not exist."
                             
         hf = h5py.File(path, 'r')
-        data = np.array(hf['data'])
-        data = data[start_bin_id: end_bin_id + 1, ...]
+        value = np.array(hf['data']['value'])
+        mask = np.array(hf['data']['mask'])
+        value = value[start_bin_id: end_bin_id + 1, ...]
+        mask = mask[start_bin_id: end_bin_id + 1, ...]        
         descriptions = list(hf['data'].attrs['descriptions'])
-        return data, descriptions
+        return value, mask, descriptions
      
     def __getitem__(self, idx):
         """ load one sample """
@@ -77,26 +79,31 @@ class WMDataset(Dataset):
         next_start_bin_id = int(sample['next_start_bin_id']) if not pd.isna(sample['next_start_bin_id']) else None
         next_end_bin_id = int(sample['next_end_bin_id']) if not pd.isna(sample['next_end_bin_id']) else None
 
-        seq, desc = self.load_sequence_netcdf4(day_in_year, start_bin_id, end_bin_id)
+        seq, mask, desc = self.load_sequence_netcdf4(day_in_year, start_bin_id, end_bin_id)
         if next_day_in_year is not None:
-            next_seq, _ = self.load_sequence_netcdf4(next_day_in_year, next_start_bin_id, next_end_bin_id)
+            next_seq, next_mask, _ = self.load_sequence_netcdf4(next_day_in_year, next_start_bin_id, next_end_bin_id)
             seq = np.concatenate([seq, next_seq])
+            mask = np.concatenate([mask, next_mask])            
         
         source_index = [desc.index(v) for v in self.source_vars]
         target_index = [desc.index(v) for v in self.target_vars]
         in_seq = seq[:self.seq_len, source_index, ...]
         out_seq = seq[self.seq_len:(self.seq_len + self.horizon), target_index, ...]
+        in_mask = mask[:self.seq_len, source_index, ...]
+        out_mask = mask[self.seq_len:(self.seq_len + self.horizon), target_index, ...]
         in_seq = in_seq.astype(np.float32)
         out_seq = out_seq.astype(np.float32)
-        return in_seq, out_seq
+        return in_seq, out_seq, in_mask, out_mask
         
     def get_item(self, idx=0):
         """ this function load one sample for debugging """
         
-        in_seq, out_seq = self.__getitem__(idx)
+        in_seq, out_seq, in_mask, out_mask = self.__getitem__(idx)
         in_seq = np.expand_dims(in_seq, axis=0)
         out_seq = np.expand_dims(out_seq, axis=0)
-        return in_seq, out_seq
+        in_mask = np.expand_dims(in_mask, axis=0)        
+        out_mask = np.expand_dims(out_mask, axis=0)
+        return in_seq, out_seq, in_mask, out_mask
     
 
 def split_train_val_test(dataset, num_test=None):

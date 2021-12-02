@@ -17,7 +17,7 @@ from utils.evaluation import rmse_error, r2_error
 def test(model, data_loader, num_test, device):
     
     model.eval()
-    history, ground_truth, prediction = [], [], []
+    history, ground_truth, prediction, his_mask, gt_mask = [], [], [], [], []
     
     with torch.no_grad():
         
@@ -25,10 +25,15 @@ def test(model, data_loader, num_test, device):
                 
             batch_x = data[0].to(device)
             batch_y = data[1].to(device) 
+            batch_x_mask = data[2].to(device)
+            batch_y_mask = data[3].to(device)
             out = model(batch_x, batch_y) 
             history.append(batch_x.cpu().data.numpy())
             ground_truth.append(batch_y.cpu().data.numpy())
             prediction.append(out.cpu().data.numpy())
+            
+            his_mask.append(batch_x_mask.cpu().data.numpy())            
+            gt_mask.append(batch_y_mask.cpu().data.numpy())
             
             print(it)
             if it == num_test - 1:
@@ -37,12 +42,14 @@ def test(model, data_loader, num_test, device):
     history = np.concatenate(history)
     ground_truth = np.concatenate(ground_truth)
     prediction = np.concatenate(prediction)
+    his_mask = np.concatenate(his_mask)        
+    gt_mask = np.concatenate(gt_mask)    
     
-    rmse = rmse_error(ground_truth, prediction)
-    r2 = r2_error(ground_truth, prediction)
-    logging.info('TEST - RMSE = {:.6f}, R2 = {:.6f}'.format(rmse, r2))
+    rmse = rmse_error(ground_truth[~gt_mask], prediction[~gt_mask])
+    r2 = r2_error(ground_truth[~gt_mask], prediction[~gt_mask])
+    print('TEST - RMSE = {:.6f}, R2 = {:.6f}'.format(rmse, r2))
     
-    return history, ground_truth, prediction
+    return history, ground_truth, prediction, his_mask, gt_mask
 
     
 def main():
@@ -68,7 +75,7 @@ def main():
         
     if 'seq2seq' in params['model_name']:
         kernel_size = int(params['model_name'][params['model_name'].index('kernel') + 6])
-        h_dim = int(params['model_name'][params['model_name'].index('hdim') + 4])
+        h_dim = int(params['model_name'][params['model_name'].index('hdim') + 4: params['model_name'].index('hdim') + 6])
         model = seq2seq.EncoderDecoderConvLSTM(in_channels=len(dataset.source_vars),
                                                h_channels=h_dim, 
                                                out_channels=len(dataset.target_vars),
@@ -81,13 +88,15 @@ def main():
 
         
     model.load_state_dict(torch.load(params['model_path'], map_location=device)['state_dict'], strict=False)
-    history, ground_truth, prediction = test(model, test_loader, num_test=3, device=device)
+    history, ground_truth, prediction, his_mask, gt_mask = test(model, test_loader, num_test=params['num_test'], device=device)
     
     np.savez_compressed(
-        os.path.join(params['result_path'], 'prediction.npz'),
-        history=v,
+        os.path.join('./prediction.npz'),
+        history=history,
         ground_truth=ground_truth,
-        prediction=prediction)
+        prediction=prediction,
+        history_mask=his_mask,
+        ground_truth_mask=gt_mask,)
 
     
 if __name__ == "__main__":

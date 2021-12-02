@@ -97,24 +97,24 @@ class UNet(ModelBase):
     
     def training_step(self, batch, batch_idx):
         
-        x, y = batch        
+        x, y, _, y_mask = batch
         out = self(x, y)
-        loss = self._compute_loss(out, y)
+        loss = self._compute_loss(out[~y_mask], y[~y_mask])
         self.log(f'train_loss', loss)
         return loss
     
     def validation_step(self, batch, batch_idx):
         
-        x, y = batch
+        x, y, _, y_mask = batch
         out = self(x, y)
-        loss = self._compute_loss(out, y)
+        loss = self._compute_loss(out[~y_mask], y[~y_mask])
         self.log(f'val_loss', loss)
 
     def test_step(self, batch, batch_idx):
         
-        x, y = batch
+        x, y, _, y_mask = batch
         out = self(x, y)
-        loss = self._compute_loss(out, y)
+        loss = self._compute_loss(out[~y_mask], y[~y_mask])
         self.log("test_loss", loss)
 
 

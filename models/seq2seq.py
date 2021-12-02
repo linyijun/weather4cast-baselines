@@ -40,18 +40,23 @@ class EncoderDecoderConvLSTM(ModelBase):
                                     h_channels=h_channels,
                                     kernel_size=kernel_size)
 
-        self.predict = nn.Sequential(
-            nn.Conv2d(in_channels=h_channels,
-                      out_channels=h_channels,
-                      kernel_size=(1, 1),
-                      padding=(0, 0)),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=h_channels,
-                      out_channels=out_channels,
-                      kernel_size=(1, 1),
-                      padding=(0, 0)),
-        )
+#         self.predict = nn.Sequential(
+#             nn.Conv2d(in_channels=h_channels,
+#                       out_channels=h_channels,
+#                       kernel_size=(1, 1),
+#                       padding=(0, 0)),
+#             nn.ReLU(),
+#             nn.Conv2d(in_channels=h_channels,
+#                       out_channels=out_channels,
+#                       kernel_size=(1, 1),
+#                       padding=(0, 0)),
+#         )
         
+        self.predict = nn.Conv2d(in_channels=h_channels,
+                                 out_channels=out_channels,
+                                 kernel_size=(1, 1),
+                                 padding=(0, 0))
+       
         self.do = nn.Dropout(p=self.dropout)
 
     def encode(self, x, seq_len, hidden_state, cell_state):
@@ -111,27 +116,27 @@ class EncoderDecoderConvLSTM(ModelBase):
     
     def training_step(self, batch, batch_idx):
         
-        x, y = batch
+        x, y, _, y_mask = batch
         
         if self.current_epoch > 10:
             out = self(x, y, teacher_forcing_ratio=0.5)
         else:
             out = self(x, y, teacher_forcing_ratio=1.)
             
-        loss = self._compute_loss(out, y)
+        loss = self._compute_loss(out[~y_mask], y[~y_mask])
         self.log(f'train_loss', loss)
         return loss
     
     def validation_step(self, batch, batch_idx):
         
-        x, y = batch
+        x, y, _, y_mask = batch
         out = self(x, y, teacher_forcing_ratio=0.)
-        loss = self._compute_loss(out, y)
+        loss = self._compute_loss(out[~y_mask], y[~y_mask])
         self.log(f'val_loss', loss)
 
     def test_step(self, batch, batch_idx):
         
-        x, y = batch
+        x, y, _, y_mask = batch
         out = self(x, y, teacher_forcing_ratio=0.)
-        loss = self._compute_loss(out, y)
+        loss = self._compute_loss(out[~y_mask], y[~y_mask])
         self.log("test_loss", loss)
