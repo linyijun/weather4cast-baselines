@@ -10,8 +10,8 @@ module load python3
 
 source activate torch-env
 
-cd /home/yaoyi/lin00786/weather4cast/weather4cast-test-lightning/
+cd /home/yaoyi/lin00786/weather4cast/weather4cast-baselines/
 
-python train.py --batch_size 32 --kernel_size 3 --h_dim 64 --horizon 1 --model_name seq2seq --num_test 50
-python train.py --batch_size 32 --kernel_size 1 --h_dim 64 --horizon 1 --model_name seq2seq --num_test 50
+python train.py --batch_size 32 --kernel_size 3 --h_dim 64 --horizon 1 --source_var_idx 0 --target_var_idx 0 --model_name seq2seq --num_test 50
+python train.py --batch_size 32 --kernel_size 1 --h_dim 64 --horizon 1 --source_var_idx 0 --target_var_idx 0 --model_name seq2seq --num_test 50
 

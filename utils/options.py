@@ -13,7 +13,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='weather4cast')
     
     # load data from file
-    parser.add_argument('--data_path', type=str, default='/data/yijun/WeatherMovie/preprocess-data/', 
+    parser.add_argument('--data_path', type=str, default='/home/yaoyi/lin00786/weather4cast/preprocess-data/',
                         help='data path, dynamic variables')
     parser.add_argument('--sample_path', type=str, default='./samples.csv', 
                         help='data path, splitting information')
@@ -21,8 +21,11 @@ def parse_args():
                         help="region_id to load data from. Default: R1")
     
     parser.add_argument('--model_name', type=str, default='test', help='model name')
-    parser.add_argument('--result_path', type=str, default='/data/yijun/WeatherMovie/weather4cast-baselines/results',
+    parser.add_argument('--result_path', type=str, default='/home/yaoyi/lin00786/weather4cast/weather4cast-baselines/results',
                          help='result path, including log file and model file')
+    
+    parser.add_argument('--source_var_idx', type=str, default='0', help='Default: temperature')
+    parser.add_argument('--target_var_idx', type=str, default='0', help='Default: temperature')
     
     # training parameters
     parser.add_argument('--gpu_id', type=int, default=0, help='GPU id')
@@ -94,13 +97,17 @@ def input_check(params):
 def load_param_dict(args=None, mode='train'):
     
     param_dict = {'mode': mode}
+    param_dict = {'vars': ['temperature', 'crr_intensity', 'asii_turb_trop_prob', 'cma']}
+    
     if args is None:
         param_dict['data_path'] = '/home/yaoyi/lin00786/weather4cast/preprocess-data/'
         param_dict['sample_path'] = './samples.csv'
         param_dict['region_id'] = 'R1'
         param_dict['model_name'] = 'Seq2Seq_seq4_hoz1_in1_out1_kernel1'
         param_dict['result_path'] = '/home/yaoyi/lin00786/weather4cast/weather4cast-test-lightning/results'
-        
+        param_dict['source_var_idx'] = [1]
+        param_dict['target_var_idx'] = [1]
+                   
         param_dict['gpu_id'] = '0'
         param_dict['num_epochs'] = 100
         param_dict['batch_size'] = 32
@@ -108,7 +115,7 @@ def load_param_dict(args=None, mode='train'):
         param_dict['weight_decay'] = 0.001
         param_dict['patience'] = 10
         param_dict['log_interval'] = 1
-        param_dict['h_dim'] = 64
+        param_dict['h_dim'] = 32
         param_dict['kernel_size'] = 3
         
         param_dict['seq_len'] = 4
@@ -124,6 +131,8 @@ def load_param_dict(args=None, mode='train'):
         param_dict['region_id'] = args.region_id
         param_dict['model_name'] = args.model_name
         param_dict['result_path'] = args.result_path
+        param_dict['source_var_idx'] = [int(i) for i in args.source_var_idx.split(',')]
+        param_dict['target_var_idx'] = [int(i) for i in args.target_var_idx.split(',')]
         
         param_dict['gpu_id'] = args.gpu_id
         param_dict['num_epochs'] = args.num_epochs
@@ -142,8 +151,8 @@ def load_param_dict(args=None, mode='train'):
         param_dict['num_test'] = args.num_test
         param_dict['verbose'] = args.verbose
     
-    param_dict['source_vars'] = ['temperature']
-    param_dict['target_vars'] = ['temperature']
+    param_dict['source_vars'] = [param_dict['vars'][i] for i in param_dict['source_var_idx']]
+    param_dict['target_vars'] = [param_dict['vars'][i] for i in param_dict['target_var_idx']]
     
     if mode == 'train':
         model_name = ''
@@ -151,16 +160,16 @@ def load_param_dict(args=None, mode='train'):
             model_name = '{}_seq{}_hoz{}_in{}_out{}_kernel{}_hdim{}'.format(param_dict['model_name'],
                                                                             param_dict['seq_len'],
                                                                             param_dict['horizon'],
-                                                                            len(param_dict['source_vars']),
-                                                                            len(param_dict['target_vars']),
+                                                                            ''.join(param_dict['source_var_idx']),
+                                                                            ''.join(param_dict['target_var_idx']),
                                                                             param_dict['kernel_size'],
                                                                             param_dict['h_dim'],)
         if param_dict['model_name'] == 'unet':
             model_name = '{}_seq{}_hoz{}_in{}_out{}'.format(param_dict['model_name'],
                                                             param_dict['seq_len'],
                                                             param_dict['horizon'],
-                                                            len(param_dict['source_vars']),
-                                                            len(param_dict['target_vars']),)
+                                                            ''.join(param_dict['source_var_idx']),
+                                                            ''.join(param_dict['target_var_idx']),)
 
         param_dict['result_path'] = os.path.join(param_dict['result_path'], 
                                                  model_name + '_' + str(int(time.time())))        

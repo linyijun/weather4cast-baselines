@@ -91,7 +91,7 @@ def main():
     history, ground_truth, prediction, his_mask, gt_mask = test(model, test_loader, num_test=params['num_test'], device=device)
     
     np.savez_compressed(
-        os.path.join('./prediction.npz'),
+        os.path.join('{}/prediction.npz'.format(params['result_path'])),
         history=history,
         ground_truth=ground_truth,
         prediction=prediction,
