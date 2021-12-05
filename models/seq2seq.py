@@ -35,7 +35,7 @@ class EncoderDecoderConvLSTM(ModelBase):
         self.encoder = ConvLSTMCell(in_channels=in_channels,
                                     h_channels=h_channels,
                                     kernel_size=kernel_size)
-g 
+
         self.decoder = ConvLSTMCell(in_channels=out_channels,
                                     h_channels=h_channels,
                                     kernel_size=kernel_size)
